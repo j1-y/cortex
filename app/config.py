@@ -7,6 +7,7 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+CORTEX_INTERNAL_API_KEY = os.getenv("CORTEX_INTERNAL_API_KEY")
 
 if not DATABASE_URL:
     raise RuntimeError(

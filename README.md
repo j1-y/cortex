@@ -43,9 +43,10 @@ Open `.env` and paste your Neon pooled connection string into `DATABASE_URL`:
 ```env
 DATABASE_URL="postgresql://..."
 GEMINI_API_KEY="your_gemini_api_key_here"
+CORTEX_INTERNAL_API_KEY="shared-server-secret"
 ```
 
-Get a Gemini API key from Google AI Studio and add it to `.env` as `GEMINI_API_KEY`.
+Get a Gemini API key from Google AI Studio and add it to `.env` as `GEMINI_API_KEY`. Set `CORTEX_INTERNAL_API_KEY` to the same server-only secret used by Nyabag for destructive cleanup calls.
 
 Run the development server:
 
@@ -434,5 +435,68 @@ Then test search:
 ```powershell
 curl.exe "http://127.0.0.1:8000/search?q=AI%20productivity%20landing%20page%20with%20pricing&limit=10"
 ```
-#   c o r t e x  
- 
+
+### Delete Bookmark Memories
+
+```http
+DELETE /memories/bookmark/{nyabagBookmarkId}?userId={userId}
+```
+
+This internal endpoint removes all Neon memory rows for one Nyabag bookmark owned by one user. It deletes matching `cortex_embeddings` rows first, then deletes matching `cortex_memories` rows. The endpoint is idempotent: if no rows match, it returns zero counts.
+
+It requires:
+
+```http
+Authorization: Bearer CORTEX_INTERNAL_API_KEY
+```
+
+Missing or malformed bearer tokens return `401`, wrong tokens return `403`, and an unconfigured `CORTEX_INTERNAL_API_KEY` disables the endpoint with `503`.
+
+Expected Nyabag call:
+
+```http
+DELETE ${CORTEX_API_URL}/memories/bookmark/{nyabagBookmarkId}?userId={userId}
+Authorization: Bearer ${CORTEX_INTERNAL_API_KEY}
+```
+
+Missing token example:
+
+```powershell
+curl.exe -i -X DELETE "http://127.0.0.1:8000/memories/bookmark/33333333-3333-3333-3333-333333333333?userId=44444444-4444-4444-4444-444444444444"
+```
+
+Expected status: `401 Unauthorized`
+
+Wrong token example:
+
+```powershell
+curl.exe -i -X DELETE "http://127.0.0.1:8000/memories/bookmark/33333333-3333-3333-3333-333333333333?userId=44444444-4444-4444-4444-444444444444" `
+  -H "Authorization: Bearer wrong-token"
+```
+
+Expected status: `403 Forbidden`
+
+Successful delete example:
+
+```powershell
+curl.exe -X DELETE "http://127.0.0.1:8000/memories/bookmark/33333333-3333-3333-3333-333333333333?userId=44444444-4444-4444-4444-444444444444" `
+  -H "Authorization: Bearer your-shared-server-secret"
+```
+
+Expected response:
+
+```json
+{
+  "deletedMemories": 1,
+  "deletedEmbeddings": 1
+}
+```
+
+Calling the same delete again returns:
+
+```json
+{
+  "deletedMemories": 0,
+  "deletedEmbeddings": 0
+}
+```
