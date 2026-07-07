@@ -285,10 +285,13 @@ If your current Neon table predates the `model_name` column, omit `e.model_name`
 ### Semantic Search
 
 ```http
-GET /search?q=AI%20SaaS%20landing%20page%20with%20pricing%20and%20testimonials&limit=10
+GET /search?q=AI%20SaaS%20landing%20page%20with%20pricing%20and%20testimonials&limit=10&userId={userId}
+Authorization: Bearer CORTEX_INTERNAL_API_KEY
 ```
 
-Make sure a memory has been processed and embedded first. Search generates a query embedding with `gemini-embedding-001`, compares it against `cortex_embeddings` with pgvector cosine distance, and returns ranked completed memories.
+Make sure a memory has been processed and embedded first. Search is an internal, user-scoped endpoint: it requires `Authorization: Bearer CORTEX_INTERNAL_API_KEY` and only ranks completed memories where `cortex_memories.user_id` matches `userId`.
+
+Search generates a query embedding with `gemini-embedding-001`, compares it against `cortex_embeddings` with pgvector cosine distance, fetches a wider candidate pool, and applies an evidence gate for specific visual terms. For example, `globe design` can match memories containing evidence such as `globe`, `earth`, `world`, `global`, `planet`, or `map`, but generic `design` or `landing-page` text alone is not enough.
 
 Testing flow:
 
@@ -313,7 +316,8 @@ POST /embed/{memoryId}
 4. Search:
 
 ```powershell
-curl.exe "http://127.0.0.1:8000/search?q=AI%20SaaS%20landing%20page%20with%20pricing%20and%20testimonials&limit=10"
+curl.exe "http://127.0.0.1:8000/search?q=AI%20SaaS%20landing%20page%20with%20pricing%20and%20testimonials&limit=10&userId=22222222-2222-2222-2222-222222222222" `
+  -H "Authorization: Bearer your-shared-server-secret"
 ```
 
 Example queries:
@@ -433,7 +437,8 @@ Expected response shape:
 Then test search:
 
 ```powershell
-curl.exe "http://127.0.0.1:8000/search?q=AI%20productivity%20landing%20page%20with%20pricing&limit=10"
+curl.exe "http://127.0.0.1:8000/search?q=AI%20productivity%20landing%20page%20with%20pricing&limit=10&userId=44444444-4444-4444-4444-444444444444" `
+  -H "Authorization: Bearer your-shared-server-secret"
 ```
 
 ### Delete Bookmark Memories
