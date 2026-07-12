@@ -75,6 +75,7 @@ class IngestResponse(BaseModel):
     url: str
     autoTags: list[str]
     visualPreview: Optional[str] = None
+    palette: list[str] = []
 
 
 class DeleteBookmarkMemoryResponse(BaseModel):

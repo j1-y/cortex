@@ -9,6 +9,7 @@ from app.services.ingest_service import (
     IngestProcessingError,
     ingest_memory,
 )
+from app.services.color_extractor import extract_palette
 
 
 logger = logging.getLogger(__name__)
@@ -44,6 +45,10 @@ def ingest(payload: RememberRequest):
             detail=f"Ingest failed: {type(exc).__name__}: {str(exc)}",
         ) from exc
 
+    # Extract the palette from the incoming screenshot URL
+    screenshot_url = str(payload.screenshotUrl) if payload.screenshotUrl else None
+    extracted_palette = extract_palette(screenshot_url, color_count=5)
+
     return IngestResponse(
         status="ingested",
         memoryId=result["memory_id"],
@@ -56,4 +61,5 @@ def ingest(payload: RememberRequest):
         url=result["url"],
         autoTags=result["auto_tags"],
         visualPreview=result["visual_preview"],
+        palette=extracted_palette,
     )
