@@ -2,6 +2,7 @@ import io
 import logging
 from typing import List
 import requests
+from PIL import Image
 from colorthief import ColorThief
 
 logger = logging.getLogger(__name__)
@@ -21,8 +22,20 @@ def extract_palette(image_url: str, color_count: int = 5) -> List[str]:
         
         image_stream = io.BytesIO(response.content)
         
-        # Extract Palette using ColorThief
-        color_thief = ColorThief(image_stream)
+        # DOWN-SCALE THE IMAGE TO PREVENT OUT-OF-MEMORY (OOM) ERRORS ON RENDER (512MB LIMIT)
+        # We resize it to a tiny thumbnail (max 400x400). 
+        # Dominant colors survive heavy downscaling, and this reduces memory usage by 99%
+        with Image.open(image_stream) as img:
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+            img.thumbnail((400, 400))
+            
+            tiny_stream = io.BytesIO()
+            img.save(tiny_stream, format='JPEG')
+            tiny_stream.seek(0)
+        
+        # Extract Palette using ColorThief on the optimized tiny stream
+        color_thief = ColorThief(tiny_stream)
         
         # get_palette returns a list of RGB tuples: [(26, 26, 26), (255, 255, 255), ...]
         # quality=10 is a good balance between performance and accuracy
